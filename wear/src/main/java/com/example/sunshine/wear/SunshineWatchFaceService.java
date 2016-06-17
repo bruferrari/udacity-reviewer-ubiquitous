@@ -17,25 +17,40 @@
 package com.example.sunshine.wear;
 
 import android.content.BroadcastReceiver;
+import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.Resources;
+import android.database.Cursor;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.Typeface;
+import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.wearable.watchface.CanvasWatchFaceService;
 import android.support.wearable.watchface.WatchFaceStyle;
-import android.text.format.Time;
+import android.text.format.DateUtils;
+import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.WindowInsets;
+
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.Result;
+import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.wearable.Wearable;
+
 import java.lang.ref.WeakReference;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Locale;
 import java.util.TimeZone;
@@ -46,6 +61,9 @@ import java.util.concurrent.TimeUnit;
  * low-bit ambient mode, the text is drawn without anti-aliasing in ambient mode.
  */
 public class SunshineWatchFaceService extends CanvasWatchFaceService {
+
+    private final String TAG = this.getClass().getSimpleName();
+
     private static final Typeface NORMAL_TYPEFACE =
             Typeface.create(Typeface.DEFAULT, Typeface.NORMAL);
     private static final Typeface BOLD_TYPEFACE =
@@ -87,7 +105,10 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
         }
     }
 
-    private class Engine extends CanvasWatchFaceService.Engine {
+    private class Engine extends CanvasWatchFaceService.Engine implements
+        GoogleApiClient.ConnectionCallbacks,
+        GoogleApiClient.OnConnectionFailedListener {
+
         final Handler mUpdateTimeHandler = new EngineHandler(this);
         boolean mRegisteredTimeZoneReceiver = false;
         Paint mBackgroundPaint;
@@ -95,6 +116,7 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
         Paint mDatePaint;
         boolean mAmbient;
         Calendar mCalendar;
+        GoogleApiClient mGoogleApiClient;
 
         final BroadcastReceiver mTimeZoneReceiver = new BroadcastReceiver() {
             @Override
@@ -120,6 +142,13 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
         public void onCreate(SurfaceHolder holder) {
             super.onCreate(holder);
 
+            mGoogleApiClient = new GoogleApiClient.Builder(SunshineWatchFaceService.this)
+                    .addConnectionCallbacks(this)
+                    .addOnConnectionFailedListener(this)
+                    .addApi(Wearable.API)
+                    .build();
+            mGoogleApiClient.connect();
+
             setWatchFaceStyle(new WatchFaceStyle.Builder(SunshineWatchFaceService.this)
                     .setCardPeekMode(WatchFaceStyle.PEEK_MODE_VARIABLE)
                     .setBackgroundVisibility(WatchFaceStyle.BACKGROUND_VISIBILITY_INTERRUPTIVE)
@@ -128,7 +157,6 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
                     .build());
             Resources resources = SunshineWatchFaceService.this.getResources();
             mYOffset = resources.getDimension(R.dimen.digital_y_offset);
-            mYDateOffset = resources.getDimension(R.dimen.digital_date_y_offset);
 
             mBackgroundPaint = new Paint();
             mBackgroundPaint.setColor(resources.getColor(R.color.background));
@@ -203,6 +231,8 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
                     ? R.dimen.digital_x_offset_round : R.dimen.digital_x_offset);
             mXDateOffset = resources.getDimension(isRound
                     ? R.dimen.digital_date_x_offset_round : R.dimen.digital_date_x_offset);
+            mYDateOffset = resources.getDimension(isRound
+                    ? R.dimen.digital_date_y_offset_round : R.dimen.digital_date_y_offset);
             float textSize = resources.getDimension(isRound
                     ? R.dimen.digital_text_size_round : R.dimen.digital_text_size);
 
@@ -288,13 +318,13 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
                 canvas.drawRect(0, 0, bounds.width(), bounds.height(), mBackgroundPaint);
             }
 
-            String text = String.format(Locale.getDefault(), "%s:%s", hourString, minuteString);
+            String text = String.format(Locale.getDefault(), "%d:%02d", Integer.parseInt(hourString),
+                    Integer.parseInt(minuteString));
 
             float centerX = (width / 2f);
             float centerY = ((height / 2f) - (mTextPaint.descent() + mTextPaint.ascent() / 2));
 
             if (existsOverlayingPeekCard()) {
-                //TODO: if exists peek card
                 canvas.drawText(text, centerX , centerY-50, mTextPaint);
             } else {
                 canvas.drawText(text, centerX , centerY, mTextPaint);
@@ -341,5 +371,22 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
                 mUpdateTimeHandler.sendEmptyMessageDelayed(MSG_UPDATE_TIME, delayMs);
             }
         }
+
+        // GoogleApiClient methods
+        @Override
+        public void onConnected(@Nullable Bundle bundle) {
+            Log.d(TAG, "onConnected: " + bundle);
+        }
+
+        @Override
+        public void onConnectionSuspended(int cause) {
+            Log.d(TAG, "onConnectionSuspended: " + cause);
+        }
+
+        @Override
+        public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+            Log.d(TAG, "onConnectionFailed: " + connectionResult);
+        }
+
     }
 }

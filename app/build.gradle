@@ -3,6 +3,7 @@ apply plugin: 'com.google.gms.google-services'
 
 ext {
     supportLibVersion = '23.4.0'
+    playServicesVersion = '9.0.2'
 }
 
 android {
@@ -39,6 +40,7 @@ dependencies {
     compile "com.android.support:design:${supportLibVersion}"
     compile "com.android.support:recyclerview-v7:${supportLibVersion}"
     compile 'com.google.android.apps.muzei:muzei-api:2.0'
-    compile 'com.google.android.gms:play-services-gcm:7.5.0'
-    compile 'com.google.android.gms:play-services-location:7.5.0'
+    compile "com.google.android.gms:play-services-gcm:${playServicesVersion}"
+    compile "com.google.android.gms:play-services-location:${playServicesVersion}"
+    compile "com.google.android.gms:play-services-wearable:${playServicesVersion}"
 }
