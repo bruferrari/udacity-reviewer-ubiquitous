@@ -40,7 +40,5 @@ dependencies {
     compile "com.android.support:design:${supportLibVersion}"
     compile "com.android.support:recyclerview-v7:${supportLibVersion}"
     compile 'com.google.android.apps.muzei:muzei-api:2.0'
-    compile "com.google.android.gms:play-services-gcm:${playServicesVersion}"
-    compile "com.google.android.gms:play-services-location:${playServicesVersion}"
-    compile "com.google.android.gms:play-services-wearable:${playServicesVersion}"
+    compile "com.google.android.gms:play-services:${playServicesVersion}"
 }

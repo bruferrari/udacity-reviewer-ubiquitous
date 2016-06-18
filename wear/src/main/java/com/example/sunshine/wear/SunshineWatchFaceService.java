@@ -17,19 +17,15 @@
 package com.example.sunshine.wear;
 
 import android.content.BroadcastReceiver;
-import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.Resources;
-import android.database.Cursor;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.Typeface;
-import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -37,20 +33,15 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.wearable.watchface.CanvasWatchFaceService;
 import android.support.wearable.watchface.WatchFaceStyle;
-import android.text.format.DateUtils;
-import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.WindowInsets;
-
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.common.api.Result;
-import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.wearable.DataApi;
+import com.google.android.gms.wearable.DataEventBuffer;
 import com.google.android.gms.wearable.Wearable;
-
 import java.lang.ref.WeakReference;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Locale;
 import java.util.TimeZone;
@@ -62,7 +53,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class SunshineWatchFaceService extends CanvasWatchFaceService {
 
-    private final String TAG = this.getClass().getSimpleName();
+    private final String TAG = SunshineWatchFaceService.class.getSimpleName();
 
     private static final Typeface NORMAL_TYPEFACE =
             Typeface.create(Typeface.DEFAULT, Typeface.NORMAL);
@@ -106,8 +97,9 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
     }
 
     private class Engine extends CanvasWatchFaceService.Engine implements
-        GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener {
+            DataApi.DataListener,
+            GoogleApiClient.ConnectionCallbacks,
+            GoogleApiClient.OnConnectionFailedListener {
 
         final Handler mUpdateTimeHandler = new EngineHandler(this);
         boolean mRegisteredTimeZoneReceiver = false;
@@ -129,7 +121,6 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
 
         float mXOffset;
         float mYOffset;
-        float mXDateOffset;
         float mYDateOffset;
 
         /**
@@ -156,7 +147,6 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
                     .setAcceptsTapEvents(true)
                     .build());
             Resources resources = SunshineWatchFaceService.this.getResources();
-            mYOffset = resources.getDimension(R.dimen.digital_y_offset);
 
             mBackgroundPaint = new Paint();
             mBackgroundPaint.setColor(resources.getColor(R.color.background));
@@ -229,8 +219,8 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
             boolean isRound = insets.isRound();
             mXOffset = resources.getDimension(isRound
                     ? R.dimen.digital_x_offset_round : R.dimen.digital_x_offset);
-            mXDateOffset = resources.getDimension(isRound
-                    ? R.dimen.digital_date_x_offset_round : R.dimen.digital_date_x_offset);
+            mYOffset = resources.getDimension(isRound
+                    ? R.dimen.digital_y_offset_round : R.dimen.digital_y_offset);
             mYDateOffset = resources.getDimension(isRound
                     ? R.dimen.digital_date_y_offset_round : R.dimen.digital_date_y_offset);
             float textSize = resources.getDimension(isRound
@@ -308,9 +298,6 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
             hourString = String.valueOf(hour);
             minuteString = String.valueOf(mCalendar.get(Calendar.MINUTE));
 
-            int width = bounds.width();
-            int height = bounds.height();
-
             // Draw the background.
             if (isInAmbientMode()) {
                 canvas.drawColor(Color.BLACK);
@@ -321,19 +308,19 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
             String text = String.format(Locale.getDefault(), "%d:%02d", Integer.parseInt(hourString),
                     Integer.parseInt(minuteString));
 
-            float centerX = (width / 2f);
-            float centerY = ((height / 2f) - (mTextPaint.descent() + mTextPaint.ascent() / 2));
+            float centerX = bounds.centerX() - (mTextPaint.measureText(text)) / 2;
+//            float centerY = ((height / 2f) - (mTextPaint.descent() + mTextPaint.ascent() / 2));
 
-            if (existsOverlayingPeekCard()) {
-                canvas.drawText(text, centerX , centerY-50, mTextPaint);
-            } else {
-                canvas.drawText(text, centerX , centerY, mTextPaint);
-                if (!isInAmbientMode()) {
-                    SimpleDateFormat sdf = new SimpleDateFormat("MMM dd yyyy", Locale.getDefault());
-                    canvas.drawText(sdf.format(Calendar.getInstance().getTime()), mXDateOffset,
-                            mYDateOffset, mDatePaint);
-                }
+            //TODO: test if exists overlaying peek card
+            canvas.drawText(text, centerX , mYOffset, mTextPaint);
+            if (!isInAmbientMode()) {
+                SimpleDateFormat sdf = new SimpleDateFormat("MMM dd yyyy", Locale.getDefault());
+                String dateString = sdf.format(Calendar.getInstance().getTime());
+                float centerDateX = bounds.centerX() - (mDatePaint.measureText(dateString)) / 2;
+
+                canvas.drawText(dateString.toUpperCase(), centerDateX, mYDateOffset, mDatePaint);
             }
+
         }
 
         private boolean existsOverlayingPeekCard() {
@@ -372,21 +359,24 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
             }
         }
 
-        // GoogleApiClient methods
         @Override
         public void onConnected(@Nullable Bundle bundle) {
-            Log.d(TAG, "onConnected: " + bundle);
+
         }
 
         @Override
-        public void onConnectionSuspended(int cause) {
-            Log.d(TAG, "onConnectionSuspended: " + cause);
+        public void onConnectionSuspended(int i) {
+
+        }
+
+        @Override
+        public void onDataChanged(DataEventBuffer dataEventBuffer) {
+
         }
 
         @Override
         public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-            Log.d(TAG, "onConnectionFailed: " + connectionResult);
-        }
 
+        }
     }
 }
