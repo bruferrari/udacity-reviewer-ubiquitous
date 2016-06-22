@@ -37,6 +37,7 @@ import android.support.annotation.Nullable;
 import android.support.wearable.watchface.CanvasWatchFaceService;
 import android.support.wearable.watchface.WatchFaceStyle;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.SurfaceHolder;
 import android.view.WindowInsets;
 
@@ -128,6 +129,9 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
         boolean mAmbient;
         Calendar mCalendar;
 
+        WatchFaceStyle roundWatchFaceStyle;
+        WatchFaceStyle squareWatchFaceStyle;
+
         final BroadcastReceiver mTimeZoneReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -158,12 +162,21 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
                     .build();
             mGoogleApiClient.connect();
 
-            setWatchFaceStyle(new WatchFaceStyle.Builder(SunshineWatchFaceService.this)
+            roundWatchFaceStyle = new WatchFaceStyle.Builder(SunshineWatchFaceService.this)
                     .setCardPeekMode(WatchFaceStyle.PEEK_MODE_VARIABLE)
                     .setBackgroundVisibility(WatchFaceStyle.BACKGROUND_VISIBILITY_INTERRUPTIVE)
                     .setShowSystemUiTime(false)
                     .setAcceptsTapEvents(true)
-                    .build());
+                    .build();
+
+            squareWatchFaceStyle = new WatchFaceStyle.Builder(SunshineWatchFaceService.this)
+                    .setCardPeekMode(WatchFaceStyle.PEEK_MODE_VARIABLE)
+                    .setBackgroundVisibility(WatchFaceStyle.BACKGROUND_VISIBILITY_INTERRUPTIVE)
+                    .setShowSystemUiTime(false)
+                    .setHotwordIndicatorGravity(Gravity.RIGHT | Gravity.CENTER_HORIZONTAL)
+                    .setAcceptsTapEvents(true)
+                    .build();
+
             Resources resources = SunshineWatchFaceService.this.getResources();
 
             createPaintings(resources);
@@ -250,6 +263,8 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
                     ? R.dimen.digital_y_offset_round : R.dimen.digital_y_offset);
             mYDateOffset = resources.getDimension(isRound
                     ? R.dimen.digital_date_y_offset_round : R.dimen.digital_date_y_offset);
+
+            setWatchFaceStyle(isRound ? roundWatchFaceStyle : squareWatchFaceStyle);
             float textSize = resources.getDimension(isRound
                     ? R.dimen.digital_text_size_round : R.dimen.digital_text_size);
 
@@ -320,6 +335,7 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
             String hourString;
             String minuteString;
             int dateYOffset = 90;
+            int ambientDateYOffset = 60;
             int tempOffset = 45;
 
             mCalendar.setTimeInMillis(System.currentTimeMillis());
@@ -342,7 +358,7 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
             if (isInAmbientMode()) {
                 canvas.drawColor(Color.BLACK);
                 if (notExistsOverlayingPeekCard())
-                    canvas.drawText(temps, tempCenterX, mYDateOffset+dateYOffset, mTempPaint);
+                    canvas.drawText(temps, tempCenterX, mYDateOffset+ambientDateYOffset, mTempPaint);
             } else {
                 canvas.drawRect(0, 0, bounds.width(), bounds.height(), mBackgroundPaint);
                 if (weatherIconBitmap != null) {
