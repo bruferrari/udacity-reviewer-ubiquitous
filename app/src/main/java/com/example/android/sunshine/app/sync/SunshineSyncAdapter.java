@@ -614,7 +614,7 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
                 maxTemperature));
         dataMapRequest.getDataMap().putString(WEATHER_TEMP_MIN, Utility.formatTemperature(context,
                 minTemperature));
-        Asset asset = getAsset(Bitmap.createScaledBitmap(icon, 52, 52, true));
+        Asset asset = getAsset(Bitmap.createScaledBitmap(icon, 62, 62, true));
         dataMapRequest.getDataMap().putAsset(WEATHER_IMG, asset);
 
         PutDataRequest request = dataMapRequest.asPutDataRequest();

@@ -319,7 +319,7 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
         public void onDraw(Canvas canvas, Rect bounds) {
             String hourString;
             String minuteString;
-            int dateOffset = 70;
+            int dateYOffset = 90;
             int tempOffset = 45;
 
             mCalendar.setTimeInMillis(System.currentTimeMillis());
@@ -342,14 +342,19 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
             if (isInAmbientMode()) {
                 canvas.drawColor(Color.BLACK);
                 if (notExistsOverlayingPeekCard())
-                    canvas.drawText(temps, tempCenterX, mYDateOffset+dateOffset, mTempPaint);
+                    canvas.drawText(temps, tempCenterX, mYDateOffset+dateYOffset, mTempPaint);
             } else {
                 canvas.drawRect(0, 0, bounds.width(), bounds.height(), mBackgroundPaint);
                 if (weatherIconBitmap != null) {
                     canvas.drawBitmap(weatherIconBitmap,
-                            tempCenterX-20, mYDateOffset+30, null);
+                            tempCenterX-30, mYDateOffset+45, null);
                 }
-                canvas.drawText(temps, tempCenterX+tempOffset, mYDateOffset+dateOffset, mTempPaint);
+                float lineCenterY = mYDateOffset+30;
+
+                canvas.drawLine(bounds.exactCenterX() - 30, lineCenterY,
+                        bounds.exactCenterX() + 30, lineCenterY+1, mTempPaint);
+
+                canvas.drawText(temps, tempCenterX+tempOffset, mYDateOffset+dateYOffset, mTempPaint);
             }
 
             String time = String.format(Locale.getDefault(), "%d:%02d", Integer.parseInt(hourString),
@@ -365,10 +370,6 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
             float centerDateX = bounds.centerX() - (mDatePaint.measureText(dateString)) / 2;
 
             canvas.drawText(dateString.toUpperCase(), centerDateX, mYDateOffset, mDatePaint);
-
-//            float xpad = bounds.width() / 2;
-
-//            canvas.drawLine(-50, 50, mTextPaint);
 
         }
 
