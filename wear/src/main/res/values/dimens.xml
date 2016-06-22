@@ -8,5 +8,7 @@
     <dimen name="digital_y_offset">60dp</dimen>
     <dimen name="digital_date_y_offset">83dp</dimen>
     <dimen name="digital_date_y_offset_round">113dp</dimen>
+
     <dimen name="digital_date_text_size">16dp</dimen>
+    <dimen name="digital_temp_text_size">24dp</dimen>
 </resources>

@@ -41,6 +41,7 @@ import com.example.android.sunshine.app.muzei.WeatherMuzeiSource;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.wearable.Asset;
 import com.google.android.gms.wearable.DataApi;
 import com.google.android.gms.wearable.PutDataMapRequest;
 import com.google.android.gms.wearable.PutDataRequest;
@@ -51,6 +52,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -363,9 +365,6 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
 
                 cVVector.add(weatherValues);
 
-                Log.d("=====> IMPORTANT  <====", String.valueOf(high + low));
-                syncWearable(weatherValues.getAsDouble(WeatherContract.WeatherEntry.COLUMN_MAX_TEMP),
-                        weatherValues.getAsDouble(WeatherContract.WeatherEntry.COLUMN_MIN_TEMP));
             }
 
             int inserted = 0;
@@ -510,8 +509,8 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
                     // WEATHER_NOTIFICATION_ID allows you to update the notification later on.
                     mNotificationManager.notify(WEATHER_NOTIFICATION_ID, mBuilder.build());
 
-//                    Log.d("=====> IMPORTANT  <====", String.valueOf(high + low));
-//                    syncWearable(high, low);
+                    Log.d("=====> IMPORTANT  <====", String.valueOf(high + low));
+                    syncWearable(high, low, largeIcon);
 
                     //refreshing last sync
                     SharedPreferences.Editor editor = prefs.edit();
@@ -523,7 +522,7 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
         }
     }
 
-    public void syncWearable(double maxTemperature, double minTemperature) {
+    private void syncWearable(double maxTemperature, double minTemperature, Bitmap icon) {
         Log.d(LOG_TAG, "syncWearable(): " + maxTemperature + " " + minTemperature);
         Context context = this.getContext();
         final GoogleApiClient mGoogleApiClient;
@@ -557,12 +556,13 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
 
         mGoogleApiClient.connect();
 
-
         PutDataMapRequest dataMapRequest = PutDataMapRequest.create(WEATHER_DATA_PATH);
         dataMapRequest.getDataMap().putString(WEATHER_TEMP_MAX, Utility.formatTemperature(context,
                 maxTemperature));
         dataMapRequest.getDataMap().putString(WEATHER_TEMP_MIN, Utility.formatTemperature(context,
                 minTemperature));
+        Asset asset = getAsset(Bitmap.createScaledBitmap(icon, 52, 52, true));
+        dataMapRequest.getDataMap().putAsset(WEATHER_IMG, asset);
 
         PutDataRequest request = dataMapRequest.asPutDataRequest();
         Wearable.DataApi.putDataItem(mGoogleApiClient, request)
@@ -581,6 +581,23 @@ public class SunshineSyncAdapter extends AbstractThreadedSyncAdapter {
                     }
 
                 });
+    }
+
+    private Asset getAsset(Bitmap bitmap) {
+        ByteArrayOutputStream stream = null;
+        try {
+            stream = new ByteArrayOutputStream();
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+            return Asset.createFromBytes(stream.toByteArray());
+        } finally {
+            if (stream != null)
+                try {
+                    stream.close();
+                } catch (IOException e) {
+                    Log.e(LOG_TAG, "Error while trying to close stream on getAsset(), cause: "
+                            + e.getMessage());
+                }
+        }
     }
 
     /**
