@@ -32,7 +32,6 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.os.ParcelFileDescriptor;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.wearable.watchface.CanvasWatchFaceService;
@@ -320,6 +319,8 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
         public void onDraw(Canvas canvas, Rect bounds) {
             String hourString;
             String minuteString;
+            int dateOffset = 70;
+            int tempOffset = 45;
 
             mCalendar.setTimeInMillis(System.currentTimeMillis());
             int hour = mCalendar.get(Calendar.HOUR);
@@ -339,30 +340,36 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
                     Integer.parseInt(minuteString));
 
             float centerX = bounds.centerX() - (mTextPaint.measureText(time)) / 2;
-//            float centerY = ((height / 2f) - (mTextPaint.descent() + mTextPaint.ascent() / 2));
 
             canvas.drawText(time, centerX , mYOffset, mTextPaint);
+
+            SimpleDateFormat sdf = new SimpleDateFormat("ccc, MMM d yyyy", Locale.getDefault());
+
+            String dateString = sdf.format(Calendar.getInstance().getTime());
+            float centerDateX = bounds.centerX() - (mDatePaint.measureText(dateString)) / 2;
+
+            canvas.drawText(dateString.toUpperCase(), centerDateX, mYDateOffset, mDatePaint);
+
+            String temps = String.format(Locale.getDefault(), "%s %s",
+                    weatherMaxTemp, weatherMinTemp);
+
+            float tempCenterX = bounds.centerX() - (mTempPaint.measureText(temps)) / 2;
+
             if (!isInAmbientMode()) {
-                SimpleDateFormat sdf = new SimpleDateFormat("ccc, MMM d yyyy", Locale.getDefault());
-                String dateString = sdf.format(Calendar.getInstance().getTime());
-                float centerDateX = bounds.centerX() - (mDatePaint.measureText(dateString)) / 2;
-
-                canvas.drawText(dateString.toUpperCase(), centerDateX, mYDateOffset, mDatePaint);
-
                 if (weatherIconBitmap != null) {
                     canvas.drawBitmap(weatherIconBitmap,
-                            centerX, mYDateOffset+70, null);
+                            tempCenterX-20, mYDateOffset+30, null);
                 }
-
-                String temps = String.format(Locale.getDefault(), "%s %s",
-                        weatherMaxTemp, weatherMinTemp);
-                canvas.drawText(temps, centerX, mYDateOffset+70, mTempPaint);
+                canvas.drawText(temps, tempCenterX+tempOffset, mYDateOffset+dateOffset, mTempPaint);
+            } else {
+                if (notExistsOverlayingPeekCard())
+                    canvas.drawText(temps, tempCenterX, mYDateOffset+dateOffset, mTempPaint);
             }
 
         }
 
-        private boolean existsOverlayingPeekCard() {
-            return !getPeekCardPosition().isEmpty();
+        private boolean notExistsOverlayingPeekCard() {
+            return getPeekCardPosition().isEmpty();
         }
 
         /**
