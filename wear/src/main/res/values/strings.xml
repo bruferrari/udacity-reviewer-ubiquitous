@@ -1,4 +1,8 @@
 <resources>
-    <string name="app_name">Wear</string>
+    <string name="app_name">Sunshine Wear App</string>
     <string name="sunshine_watch_face">Sunshine</string>
+    <string name="WEATHER_DATA_PATH">/weather</string>
+    <string name="WEATHER_TEMP_MAX">weather_temp_max</string>
+    <string name="WEATHER_TEMP_MIN">weather_temp_min</string>
+    <string name="WEATHER_IMG">weather_img</string>
 </resources>

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.example.sunshine.wear;
+package com.example.android.sunshine.app;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -33,13 +33,19 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.wearable.watchface.CanvasWatchFaceService;
 import android.support.wearable.watchface.WatchFaceStyle;
+import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.WindowInsets;
+
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.wearable.DataApi;
+import com.google.android.gms.wearable.DataEvent;
 import com.google.android.gms.wearable.DataEventBuffer;
+import com.google.android.gms.wearable.DataMap;
+import com.google.android.gms.wearable.DataMapItem;
 import com.google.android.gms.wearable.Wearable;
+
 import java.lang.ref.WeakReference;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -101,6 +107,12 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
             GoogleApiClient.ConnectionCallbacks,
             GoogleApiClient.OnConnectionFailedListener {
 
+        GoogleApiClient mGoogleApiClient;
+        private String path;
+        String weatherMaxTemp;
+        String weatherMinTemp;
+
+
         final Handler mUpdateTimeHandler = new EngineHandler(this);
         boolean mRegisteredTimeZoneReceiver = false;
         Paint mBackgroundPaint;
@@ -108,7 +120,6 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
         Paint mDatePaint;
         boolean mAmbient;
         Calendar mCalendar;
-        GoogleApiClient mGoogleApiClient;
 
         final BroadcastReceiver mTimeZoneReceiver = new BroadcastReceiver() {
             @Override
@@ -133,10 +144,10 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
         public void onCreate(SurfaceHolder holder) {
             super.onCreate(holder);
 
-            mGoogleApiClient = new GoogleApiClient.Builder(SunshineWatchFaceService.this)
+            mGoogleApiClient = new GoogleApiClient.Builder(getApplicationContext())
+                    .addApi(Wearable.API)
                     .addConnectionCallbacks(this)
                     .addOnConnectionFailedListener(this)
-                    .addApi(Wearable.API)
                     .build();
             mGoogleApiClient.connect();
 
@@ -164,6 +175,7 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
         @Override
         public void onDestroy() {
             mUpdateTimeHandler.removeMessages(MSG_UPDATE_TIME);
+            mGoogleApiClient.disconnect();
             super.onDestroy();
         }
 
@@ -252,6 +264,7 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
                 mAmbient = inAmbientMode;
                 if (mLowBitAmbient) {
                     mTextPaint.setAntiAlias(!inAmbientMode);
+                    mDatePaint.setAntiAlias(!inAmbientMode);
                 }
                 invalidate();
             }
@@ -305,20 +318,23 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
                 canvas.drawRect(0, 0, bounds.width(), bounds.height(), mBackgroundPaint);
             }
 
-            String text = String.format(Locale.getDefault(), "%d:%02d", Integer.parseInt(hourString),
+            String time = String.format(Locale.getDefault(), "%d:%02d", Integer.parseInt(hourString),
                     Integer.parseInt(minuteString));
 
-            float centerX = bounds.centerX() - (mTextPaint.measureText(text)) / 2;
+            float centerX = bounds.centerX() - (mTextPaint.measureText(time)) / 2;
 //            float centerY = ((height / 2f) - (mTextPaint.descent() + mTextPaint.ascent() / 2));
 
-            //TODO: test if exists overlaying peek card
-            canvas.drawText(text, centerX , mYOffset, mTextPaint);
+            canvas.drawText(time, centerX , mYOffset, mTextPaint);
             if (!isInAmbientMode()) {
-                SimpleDateFormat sdf = new SimpleDateFormat("MMM dd yyyy", Locale.getDefault());
+                SimpleDateFormat sdf = new SimpleDateFormat("ccc, MMM d yyyy", Locale.getDefault());
                 String dateString = sdf.format(Calendar.getInstance().getTime());
                 float centerDateX = bounds.centerX() - (mDatePaint.measureText(dateString)) / 2;
 
                 canvas.drawText(dateString.toUpperCase(), centerDateX, mYDateOffset, mDatePaint);
+
+                String temps = String.format(Locale.getDefault(), "%s %s",
+                        weatherMaxTemp, weatherMinTemp);
+                canvas.drawText(temps, centerDateX, mYDateOffset+50, mDatePaint);
             }
 
         }
@@ -361,22 +377,41 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
 
         @Override
         public void onConnected(@Nullable Bundle bundle) {
-
+            Wearable.DataApi.addListener(mGoogleApiClient, this);
         }
 
         @Override
-        public void onConnectionSuspended(int i) {
-
+        public void onConnectionSuspended(int cause) {
+            Log.d(TAG, "GoogleApiClient connection suspended, cause: " + cause);
         }
 
         @Override
         public void onDataChanged(DataEventBuffer dataEventBuffer) {
+            for (DataEvent event : dataEventBuffer) {
+                Log.v(TAG, "DataMap received on watch: " + DataMapItem.fromDataItem(event.getDataItem())
+                        .getDataMap());
+                if (event.getType() == DataEvent.TYPE_CHANGED) {
 
+                    path = event.getDataItem().getUri().getPath();
+                    if (path.equals(getResources().getString(R.string.WEATHER_DATA_PATH))) {
+                        try {
+                            DataMap dataMap = DataMapItem.fromDataItem(event.getDataItem()).getDataMap();
+                            weatherMaxTemp = dataMap.getString(getResources().getString(R.string.WEATHER_TEMP_MAX));
+                            weatherMinTemp = dataMap.getString(getResources().getString(R.string.WEATHER_TEMP_MIN));
+                        } catch (Exception e) {
+                            Log.e(TAG, e.getMessage());
+                            e.printStackTrace();
+                        }
+                    } else
+                        Log.e(TAG, "Unknown path: " + path);
+                } else
+                    Log.e(TAG, "Unknown data event type: " + event.getType());
+            }
         }
 
         @Override
         public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-
+            Log.e(TAG, "GoogleApiClient connection failed: " + connectionResult);
         }
     }
 }
