@@ -329,11 +329,27 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
             hourString = String.valueOf(hour);
             minuteString = String.valueOf(mCalendar.get(Calendar.MINUTE));
 
+            String temps = null;
+            if (weatherMaxTemp != null && weatherMinTemp != null)
+                temps = String.format(Locale.getDefault(), "%s %s", weatherMaxTemp, weatherMinTemp);
+            else
+                temps = String.format(Locale.getDefault(), "%s %s"
+                        , "- -" + "\u00B0", "- -" + "\u00B0");
+
+            float tempCenterX = bounds.centerX() - (mTempPaint.measureText(temps)) / 2;
+
             // Draw the background.
             if (isInAmbientMode()) {
                 canvas.drawColor(Color.BLACK);
+                if (notExistsOverlayingPeekCard())
+                    canvas.drawText(temps, tempCenterX, mYDateOffset+dateOffset, mTempPaint);
             } else {
                 canvas.drawRect(0, 0, bounds.width(), bounds.height(), mBackgroundPaint);
+                if (weatherIconBitmap != null) {
+                    canvas.drawBitmap(weatherIconBitmap,
+                            tempCenterX-20, mYDateOffset+30, null);
+                }
+                canvas.drawText(temps, tempCenterX+tempOffset, mYDateOffset+dateOffset, mTempPaint);
             }
 
             String time = String.format(Locale.getDefault(), "%d:%02d", Integer.parseInt(hourString),
@@ -350,21 +366,9 @@ public class SunshineWatchFaceService extends CanvasWatchFaceService {
 
             canvas.drawText(dateString.toUpperCase(), centerDateX, mYDateOffset, mDatePaint);
 
-            String temps = String.format(Locale.getDefault(), "%s %s",
-                    weatherMaxTemp, weatherMinTemp);
+//            float xpad = bounds.width() / 2;
 
-            float tempCenterX = bounds.centerX() - (mTempPaint.measureText(temps)) / 2;
-
-            if (!isInAmbientMode()) {
-                if (weatherIconBitmap != null) {
-                    canvas.drawBitmap(weatherIconBitmap,
-                            tempCenterX-20, mYDateOffset+30, null);
-                }
-                canvas.drawText(temps, tempCenterX+tempOffset, mYDateOffset+dateOffset, mTempPaint);
-            } else {
-                if (notExistsOverlayingPeekCard())
-                    canvas.drawText(temps, tempCenterX, mYDateOffset+dateOffset, mTempPaint);
-            }
+//            canvas.drawLine(-50, 50, mTextPaint);
 
         }
 

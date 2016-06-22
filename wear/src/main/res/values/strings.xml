@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:xliff="http://schemas.android.com/tools">
     <string name="app_name">Sunshine Wear App</string>
     <string name="sunshine_watch_face">Sunshine</string>
     <string name="WEATHER_DATA_PATH">/weather</string>
